@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#FAF8F3" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Mots Farsi" />
+  <title>Boîte à Mots — Farsi</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet" />
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --cream:      #FAF8F3;
+      --ink:        #0F0F0D;
+      --ink-mid:    #2E2E2A;
+      --ink-faint:  #5A5A54;
+      --line:       #D4CFC4;
+      --accent:     #B84D20;
+      --accent-bg:  #FDE8D8;
+      --collect-bg: #EDE8DC;
+      --pill-bg:    #E8E4DA;
+      --pill-border:#C8C4B8;
+      --font: 'Atkinson Hyperlegible', 'Arial', sans-serif;
+      --r: 12px;
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --safe-top: env(safe-area-inset-top, 0px);
+    }
+
+    html, body {
+      height: 100%; width: 100%; max-width: 100vw;
+      overflow-x: hidden;
+      background: var(--cream); color: var(--ink);
+      font-family: var(--font); font-size: 18px; line-height: 1.5;
+      -webkit-text-size-adjust: 100%; overscroll-behavior: none;
+    }
+
+    #app {
+      display: flex; flex-direction: column;
+      height: 100dvh; width: 100%; max-width: 520px;
+      margin: 0 auto; overflow: hidden;
+    }
+
+    /* ── STATUS BAR ── */
+    .status-bar {
+      flex-shrink: 0;
+      display: flex; align-items: center; gap: 8px;
+      padding: 4px 16px;
+      font-size: 13px; font-weight: 700;
+      background: var(--pill-bg); border-bottom: 1px solid var(--line);
+      min-height: 30px;
+    }
+    .status-dot {
+      width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+      background: #aaa; transition: background .3s;
+    }
+    .status-dot.ok  { background: #3aaa6a; }
+    .status-dot.err { background: #cc3333; }
+    .status-dot.loading { background: #f0a030; animation: pulse .8s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+    .status-label { color: var(--ink-mid); }
+
+    /* ── HEADER ── */
+    header {
+      flex-shrink: 0;
+      padding: calc(8px + var(--safe-top)) 16px 0;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    header h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.3px; }
+    header h1 span { color: var(--accent); }
+    .header-count {
+      font-size: 14px; font-weight: 700; color: var(--ink-mid);
+      background: var(--pill-bg); border: 2px solid var(--pill-border);
+      border-radius: 20px; padding: 3px 10px; white-space: nowrap;
+    }
+
+    /* ── TABS ── */
+    .tabs {
+      flex-shrink: 0; display: flex; gap: 4px;
+      padding: 10px 16px 0; border-bottom: 2px solid var(--line);
+    }
+    .tab-btn {
+      flex: 1; background: none; border: none;
+      border-bottom: 3px solid transparent; margin-bottom: -2px;
+      padding: 7px 4px 10px;
+      font-family: var(--font); font-size: 17px; font-weight: 700;
+      color: var(--ink-faint); cursor: pointer;
+      transition: color .15s, border-color .15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .tab-btn.active { color: var(--ink); border-bottom-color: var(--accent); }
+
+    /* ── CONTROLS ── */
+    .controls {
+      flex-shrink: 0; padding: 10px 16px 6px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .controls-row { display: flex; align-items: center; gap: 8px; }
+
+    .search-input {
+      flex: 1; min-width: 0;
+      background: var(--pill-bg); border: 2px solid var(--pill-border);
+      border-radius: 10px; padding: 10px 14px;
+      font-family: var(--font); font-size: 18px; color: var(--ink);
+      outline: none; transition: border-color .15s;
+    }
+    .search-input:focus { border-color: var(--accent); }
+    .search-input::placeholder { color: var(--ink-faint); }
+
+    .toggle-group {
+      display: flex; background: var(--pill-bg);
+      border: 2px solid var(--pill-border); border-radius: 8px;
+      overflow: hidden; flex-shrink: 0;
+    }
+    .toggle-btn {
+      background: none; border: none; padding: 8px 12px;
+      font-family: var(--font); font-size: 15px; font-weight: 700;
+      color: var(--ink-mid); cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      transition: background .12s, color .12s; white-space: nowrap;
+    }
+    .toggle-btn.active { background: var(--ink); color: var(--cream); border-radius: 6px; }
+
+    /* ── CAT STRIP ── */
+    .cat-strip {
+      display: flex; gap: 6px;
+      overflow-x: auto; padding-bottom: 4px;
+      -webkit-overflow-scrolling: touch; scrollbar-width: none;
+    }
+    .cat-strip::-webkit-scrollbar { display: none; }
+    .cat-pill {
+      flex-shrink: 0;
+      background: var(--pill-bg); border: 2px solid var(--pill-border);
+      border-radius: 20px; padding: 5px 13px;
+      font-family: var(--font); font-size: 14px; font-weight: 700;
+      color: var(--ink-mid); cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      transition: background .1s, color .1s, border-color .1s;
+      text-transform: uppercase; letter-spacing: .4px; white-space: nowrap;
+    }
+    .cat-pill.active { background: var(--accent); color: var(--cream); border-color: var(--accent); }
+
+    /* ── WORD LIST ── */
+    #tab-words { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+
+    .word-scroll {
+      flex: 1; overflow-y: auto; overflow-x: hidden;
+      padding: 4px 16px 0; -webkit-overflow-scrolling: touch;
+    }
+    .word-list { display: flex; flex-direction: column; gap: 2px; padding-bottom: 24px; }
+
+    .word-item {
+      display: flex; align-items: center;
+      padding: 13px 12px; border-radius: var(--r);
+      cursor: pointer; user-select: none; -webkit-user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      transition: background .1s; gap: 10px; min-width: 0;
+    }
+    .word-item:active { background: var(--accent-bg); }
+    .word-item.in-collect { background: var(--accent-bg); }
+    .word-item.in-collect .word-latin { color: var(--accent); }
+
+    .word-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--line); flex-shrink: 0; transition: background .15s;
+    }
+    .word-item.in-collect .word-dot { background: var(--accent); }
+
+    .word-texts { flex: 1; min-width: 0; overflow: hidden; }
+    .word-latin { font-size: 22px; font-weight: 700; color: var(--ink); line-height: 1.2; }
+    .word-phon  { font-size: 17px; color: var(--ink-mid); margin-top: 2px; }
+    .word-fr    { font-size: 15px; color: var(--ink-faint); margin-top: 2px; font-style: italic; }
+    .word-ref   { font-size: 11px; color: var(--ink-faint); margin-top: 2px; font-family: monospace; letter-spacing: .4px; }
+
+    .word-cat {
+      font-size: 12px; color: var(--ink-mid);
+      background: var(--pill-bg); border: 1.5px solid var(--pill-border);
+      border-radius: 6px; padding: 3px 8px;
+      flex-shrink: 0; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .4px; white-space: nowrap;
+    }
+
+    /* ── COLLECT PANEL ── */
+    .collect-panel {
+      flex-shrink: 0; background: var(--collect-bg);
+      border-top: 2px solid var(--line); padding: 10px 16px;
+      padding-bottom: calc(10px + var(--safe-bottom));
+    }
+    .collect-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .collect-title { font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px; color: var(--ink-mid); }
+    .collect-clear { background: none; border: none; font-family: var(--font); font-size: 14px; color: var(--accent); font-weight: 700; cursor: pointer; padding: 4px 0; -webkit-tap-highlight-color: transparent; }
+    .collect-chips { display: flex; flex-wrap: wrap; gap: 7px; min-height: 38px; }
+    .collect-empty { font-size: 15px; color: var(--ink-faint); font-style: italic; align-self: center; }
+
+    .chip {
+      display: flex; align-items: center; gap: 5px;
+      background: var(--cream); border: 2px solid var(--accent);
+      border-radius: 8px; padding: 5px 8px 5px 10px;
+      font-family: var(--font); cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .chip-word { font-size: 17px; font-weight: 700; color: var(--ink); }
+    .chip-phon { font-size: 13px; color: var(--ink-mid); }
+    .chip-remove { font-size: 20px; color: var(--accent); font-weight: 700; line-height: 1; flex-shrink: 0; }
+
+    /* ── GRAMMAR TAB ── */
+    #tab-grammar { display: none; flex-direction: column; flex: 1; min-height: 0; overflow-y: auto; padding: 16px; }
+    #tab-grammar.visible { display: flex; }
+    .grammar-section { margin-bottom: 28px; }
+    .grammar-section h2 { font-size: 20px; font-weight: 700; margin-bottom: 8px; padding-bottom: 5px; border-bottom: 2px solid var(--line); color: var(--ink); }
+    .grammar-section p, .grammar-section li { font-size: 17px; color: var(--ink-mid); line-height: 1.7; margin-bottom: 5px; }
+    .grammar-section strong { color: var(--ink); }
+    .grammar-section ul { padding-left: 18px; }
+    .grammar-example {
+      background: var(--pill-bg); border-left: 4px solid var(--accent);
+      border-radius: 0 8px 8px 0; padding: 10px 14px; margin: 7px 0;
+    }
+    .grammar-example .latin { font-size: 19px; font-weight: 700; color: var(--ink); }
+    .grammar-example .phon  { color: var(--ink-mid); font-size: 16px; margin-top: 2px; }
+    .grammar-example .trad  { color: var(--ink-faint); font-size: 15px; font-style: italic; margin-top: 2px; }
+    .conj-table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 16px; }
+    .conj-table td { padding: 8px 8px; border-bottom: 1px solid var(--line); color: var(--ink-mid); }
+    .conj-table td:first-child { font-weight: 700; color: var(--ink); width: 50%; }
+    .conj-table tr:last-child td { border-bottom: none; }
+
+    /* ── FAB ── */
+    .fab {
+      position: fixed; bottom: calc(20px + var(--safe-bottom)); right: 16px;
+      width: 56px; height: 56px;
+      background: var(--accent); color: var(--cream);
+      border: none; border-radius: 50%;
+      font-size: 30px; line-height: 1; cursor: pointer;
+      box-shadow: 0 4px 18px rgba(184,77,32,.4);
+      display: flex; align-items: center; justify-content: center;
+      -webkit-tap-highlight-color: transparent;
+      transition: transform .1s; z-index: 10;
+    }
+    .fab:active { transform: scale(.93); }
+
+    /* ── MODAL ── */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(15,15,13,.6);
+      display: flex; align-items: flex-end;
+      z-index: 100; opacity: 0; pointer-events: none; transition: opacity .2s;
+    }
+    .modal-overlay.open { opacity: 1; pointer-events: all; }
+    .modal {
+      background: var(--cream); border-radius: 20px 20px 0 0;
+      padding: 24px 16px calc(24px + var(--safe-bottom));
+      width: 100%; transform: translateY(100%);
+      transition: transform .25s cubic-bezier(.22,1,.36,1);
+    }
+    .modal-overlay.open .modal { transform: translateY(0); }
+    .modal h2 { font-size: 22px; font-weight: 700; margin-bottom: 16px; color: var(--ink); }
+    .modal label { display: block; font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--ink-mid); margin-bottom: 4px; }
+    .modal input, .modal select {
+      width: 100%; background: var(--pill-bg);
+      border: 2px solid var(--pill-border); border-radius: 10px;
+      padding: 12px 14px; font-family: var(--font); font-size: 19px; color: var(--ink);
+      outline: none; margin-bottom: 12px; transition: border-color .15s;
+    }
+    .modal input:focus, .modal select:focus { border-color: var(--accent); }
+    .modal-actions { display: flex; gap: 10px; margin-top: 4px; }
+    .btn { flex: 1; padding: 14px; border: none; border-radius: 10px; font-family: var(--font); font-size: 18px; font-weight: 700; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+    .btn-primary { background: var(--accent); color: var(--cream); }
+    .btn-secondary { background: var(--pill-bg); color: var(--ink); }
+    .btn:active { opacity: .8; }
+    .btn:disabled { opacity: .5; cursor: not-allowed; }
+
+    /* ── EMPTY / LOADING ── */
+    .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 50px 20px; gap: 10px; color: var(--ink-faint); text-align: center; }
+    .empty-state .icon { font-size: 44px; }
+    .empty-state p { font-size: 18px; }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- Barre de statut connexion Supabase -->
+  <div class="status-bar">
+    <div class="status-dot loading" id="status-dot"></div>
+    <span class="status-label" id="status-label">Connexion…</span>
+  </div>
+
+  <header>
+    <h1>Boîte à <span>Mots</span></h1>
+    <span class="header-count" id="header-count">— mots</span>
+  </header>
+
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="words">Sac de mots</button>
+    <button class="tab-btn" data-tab="grammar">Grammaire</button>
+  </div>
+
+  <div id="tab-words">
+    <div class="controls">
+      <div class="controls-row">
+        <input class="search-input" id="search-input" type="search" placeholder="Chercher un mot…" autocomplete="off" autocorrect="off" spellcheck="false" />
+        <div class="toggle-group">
+          <button class="toggle-btn active" data-mode="list">Liste</button>
+          <button class="toggle-btn" data-mode="collect">Collecte</button>
+        </div>
+      </div>
+      <div class="cat-strip" id="cat-strip"></div>
+    </div>
+
+    <div class="word-scroll">
+      <div class="word-list" id="word-list">
+        <div class="empty-state"><div class="icon">⏳</div><p>Chargement…</p></div>
+      </div>
+    </div>
+
+    <div class="collect-panel" id="collect-panel" style="display:none">
+      <div class="collect-header">
+        <span class="collect-title">Sélection (<span id="collect-count">0</span>)</span>
+        <button class="collect-clear" id="collect-clear">Tout effacer</button>
+      </div>
+      <div class="collect-chips" id="collect-chips">
+        <span class="collect-empty">Maintenez un mot pour l'ajouter</span>
+      </div>
+    </div>
+  </div>
+
+  <div id="tab-grammar">
+    <div class="grammar-section">
+      <h2>Ordre des mots (SOV)</h2>
+      <p>Le farsi suit l'ordre <strong>Sujet – Objet – Verbe</strong>, à l'inverse du français (SVO).</p>
+      <div class="grammar-example">
+        <div class="latin">Man sib mikharam</div>
+        <div class="phon">man sib mi-kha-ram</div>
+        <div class="trad">Je mange une pomme (litt. "Je pomme mange")</div>
+      </div>
+    </div>
+    <div class="grammar-section">
+      <h2>Le verbe "être" — présent</h2>
+      <table class="conj-table">
+        <tr><td>Man hastam</td><td>Je suis</td></tr>
+        <tr><td>To hasti</td><td>Tu es</td></tr>
+        <tr><td>U hast</td><td>Il / elle est</td></tr>
+        <tr><td>Ma hastim</td><td>Nous sommes</td></tr>
+        <tr><td>Shoma hastid</td><td>Vous êtes</td></tr>
+        <tr><td>Anha hastand</td><td>Ils / elles sont</td></tr>
+      </table>
+      <p>Forme courte collée : <strong>khubam</strong> = je suis bien, <strong>khubet</strong> = tu vas bien.</p>
+    </div>
+    <div class="grammar-section">
+      <h2>Conjugaison au présent</h2>
+      <p>Préfixe <strong>mi-</strong> + radical du présent + terminaison.</p>
+      <table class="conj-table">
+        <tr><td>mi-ravam</td><td>je pars</td></tr>
+        <tr><td>mi-ravi</td><td>tu pars</td></tr>
+        <tr><td>mi-ravad</td><td>il / elle part</td></tr>
+        <tr><td>mi-ravim</td><td>nous partons</td></tr>
+        <tr><td>mi-ravid</td><td>vous partez</td></tr>
+        <tr><td>mi-ravand</td><td>ils partent</td></tr>
+      </table>
+      <p>Terminaisons : <strong>-am, -i, -ad, -im, -id, -and</strong></p>
+    </div>
+    <div class="grammar-section">
+      <h2>Conjugaison au passé simple</h2>
+      <p>Radical du passé + terminaisons (<strong>-am, -i, —, -im, -id, -and</strong>).</p>
+      <div class="grammar-example">
+        <div class="latin">Raftam / Rafti / Raft</div>
+        <div class="phon">raf-tam / raf-ti / raft</div>
+        <div class="trad">Je suis parti / tu es parti / il est parti</div>
+      </div>
+    </div>
+    <div class="grammar-section">
+      <h2>Négation</h2>
+      <p>Préfixe <strong>na-</strong> devant le verbe. Remplace <strong>mi-</strong> au présent.</p>
+      <div class="grammar-example">
+        <div class="latin">Nami-ravam / Naraftam</div>
+        <div class="trad">Je ne pars pas / Je ne suis pas parti</div>
+      </div>
+    </div>
+    <div class="grammar-section">
+      <h2>Verbes composés</h2>
+      <p>Nom/adjectif + verbe léger (<strong>kardan</strong>, <strong>shodan</strong>, <strong>zadan</strong>, <strong>dashtan</strong>).</p>
+      <table class="conj-table">
+        <tr><td>Sohbat kardan</td><td>parler / converser</td></tr>
+        <tr><td>Kâr kardan</td><td>travailler</td></tr>
+        <tr><td>Dust dashtan</td><td>aimer</td></tr>
+        <tr><td>Khaste shodan</td><td>se fatiguer</td></tr>
+        <tr><td>Telefon zadan</td><td>téléphoner</td></tr>
+        <tr><td>Fekr kardan</td><td>penser</td></tr>
+      </table>
+    </div>
+    <div class="grammar-section">
+      <h2>Vouloir — Khâstan</h2>
+      <table class="conj-table">
+        <tr><td>mikhâham</td><td>je veux</td></tr>
+        <tr><td>mikhâhi</td><td>tu veux</td></tr>
+        <tr><td>mikhâhad</td><td>il / elle veut</td></tr>
+        <tr><td>mikhâhim</td><td>nous voulons</td></tr>
+        <tr><td>mikhâhid</td><td>vous voulez</td></tr>
+        <tr><td>mikhâhand</td><td>ils veulent</td></tr>
+      </table>
+      <p>Suivi de l'infinitif : <strong>mikhâham beram</strong> = je veux partir.</p>
+    </div>
+    <div class="grammar-section">
+      <h2>Pouvoir — Tavânestan</h2>
+      <table class="conj-table">
+        <tr><td>mitavânam</td><td>je peux</td></tr>
+        <tr><td>mitavâni</td><td>tu peux</td></tr>
+        <tr><td>mitavânad</td><td>il / elle peut</td></tr>
+      </table>
+      <p>Forme parlée courante : <strong>mitonam, mitoni, mitoneh…</strong></p>
+    </div>
+    <div class="grammar-section">
+      <h2>L'ezafe — lier deux noms</h2>
+      <p><strong>-e</strong> (ou <strong>-ye</strong> après voyelle) relie un nom à son adjectif ou complément.</p>
+      <div class="grammar-example">
+        <div class="latin">Ketab-e khub / Khane-ye man</div>
+        <div class="trad">Un bon livre / ma maison</div>
+      </div>
+    </div>
+    <div class="grammar-section">
+      <h2>Marqueur d'objet direct — "râ"</h2>
+      <p>Objet direct défini : on place <strong>râ</strong> après le nom.</p>
+      <div class="grammar-example">
+        <div class="latin">Ketab râ mikharam</div>
+        <div class="trad">Je mange LE pain (objet défini)</div>
+      </div>
+    </div>
+    <div class="grammar-section">
+      <h2>Pluriel</h2>
+      <p><strong>-ha</strong> pour les choses, <strong>-an</strong> pour les personnes.</p>
+      <div class="grammar-example">
+        <div class="latin">Ketab-ha / Doost-an</div>
+        <div class="trad">Livres / amis</div>
+      </div>
+    </div>
+    <div class="grammar-section">
+      <h2>Pronoms possessifs (suffixes)</h2>
+      <table class="conj-table">
+        <tr><td>-am</td><td>mon / ma</td></tr>
+        <tr><td>-at</td><td>ton / ta</td></tr>
+        <tr><td>-ash</td><td>son / sa</td></tr>
+        <tr><td>-eman</td><td>notre</td></tr>
+        <tr><td>-etan</td><td>votre</td></tr>
+        <tr><td>-eshan</td><td>leur</td></tr>
+      </table>
+      <div class="grammar-example">
+        <div class="latin">Ketab-am / Doost-at / Khane-ash</div>
+        <div class="trad">Mon livre / ton ami / sa maison</div>
+      </div>
+    </div>
+    <div class="grammar-section">
+      <h2>Questions — mots interrogatifs</h2>
+      <table class="conj-table">
+        <tr><td>Koja</td><td>où</td></tr>
+        <tr><td>Chi / Che</td><td>quoi / quel</td></tr>
+        <tr><td>Key</td><td>quand</td></tr>
+        <tr><td>Chera</td><td>pourquoi</td></tr>
+        <tr><td>Chetor</td><td>comment</td></tr>
+        <tr><td>Chand</td><td>combien</td></tr>
+        <tr><td>Ki</td><td>qui</td></tr>
+      </table>
+    </div>
+    <div class="grammar-section">
+      <h2>Politesse — Taarof</h2>
+      <p>Le taarof est le code de politesse farsi : offrir, refuser, re-offrir. Refuser une offre une ou deux fois avant d'accepter est attendu et poli. Mots clés :</p>
+      <ul>
+        <li><strong>Befarmaid</strong> — je vous en prie (inviter à entrer, s'asseoir, manger)</li>
+        <li><strong>Ghabel nadâré</strong> — c'est rien, c'est peu (pour minimiser un cadeau)</li>
+        <li><strong>Zahmat nakesh</strong> — ne te dérange pas</li>
+        <li><strong>Dastet dard nakone</strong> — merci pour ton aide (litt. "que ta main ne souffre pas")</li>
+      </ul>
+    </div>
+  </div>
+
+</div><!-- /app -->
+
+<button class="fab" id="fab-add" aria-label="Ajouter un mot">+</button>
+
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <h2>Nouveau mot</h2>
+    <label for="inp-latin">Mot en latin</label>
+    <input id="inp-latin" type="text" placeholder="Ex: Salam" autocorrect="off" autocapitalize="words" />
+    <label for="inp-phon">Phonétique (français)</label>
+    <input id="inp-phon" type="text" placeholder="Ex: sa-lâm" autocorrect="off" autocapitalize="none" />
+    <label for="inp-fr">Traduction française</label>
+    <input id="inp-fr" type="text" placeholder="Ex: bonjour" autocorrect="off" />
+    <label for="inp-cat">Catégorie</label>
+    <select id="inp-cat">
+      <option value="verbe">Verbe</option>
+      <option value="nom">Nom</option>
+      <option value="adj">Adjectif</option>
+      <option value="pronom">Pronom</option>
+      <option value="adv">Adverbe</option>
+      <option value="conj">Conjonction</option>
+      <option value="expr">Expression</option>
+      <option value="nombre">Nombre</option>
+      <option value="mot">Mot outil</option>
+    </select>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="modal-cancel">Annuler</button>
+      <button class="btn btn-primary" id="modal-save">Ajouter</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+//  CONFIGURATION SUPABASE — à modifier directement ici
+// ============================================================
+const SUPABASE_URL  = 'https://VOTRE_PROJET.supabase.co';   // ← remplacer
+const SUPABASE_ANON = 'VOTRE_ANON_KEY';                      // ← remplacer
+// ============================================================
+
+// ── Helpers API ─────────────────────────────────────────────
+async function sbFetch(path, opts = {}) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+    ...opts,
+    headers: {
+      'apikey': SUPABASE_ANON,
+      'Authorization': `Bearer ${SUPABASE_ANON}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=representation',
+      ...(opts.headers || {})
+    }
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || `HTTP ${res.status}`);
+  }
+  // 204 No Content
+  if (res.status === 204) return null;
+  return res.json();
+}
+
+async function loadWords() {
+  // Tri par cat puis latin pour un affichage stable
+  return sbFetch('words?select=id,ref,latin,phon,fr,cat&order=cat.asc,latin.asc');
+}
+
+async function insertWord(payload) {
+  // payload = { ref, latin, phon, fr, cat }
+  return sbFetch('words', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+}
+
+// ── Génération de REF pour les nouveaux mots ────────────────
+const CAT_PREFIX = {
+  verbe:'VRB', nom:'NOM', adj:'ADJ', pronom:'PRO',
+  adv:'ADV',  conj:'CNJ', expr:'EXP', nombre:'NBR', mot:'MOT'
+};
+
+function generateRef(cat, existingWords) {
+  const prefix = CAT_PREFIX[cat] || 'USR';
+  const nums = existingWords
+    .filter(w => w.ref && w.ref.startsWith(prefix + '-'))
+    .map(w => parseInt(w.ref.split('-')[1]) || 0);
+  const next = nums.length ? Math.max(...nums) + 1 : 1;
+  return `${prefix}-${String(next).padStart(3, '0')}`;
+}
+
+// ── State ────────────────────────────────────────────────────
+let words     = [];
+let collected = [];   // IDs (bigint → string ou number)
+let mode      = 'list';
+let searchQ   = '';
+let activeCat = 'tout';
+let holdTimer = null;
+
+const CATS = [
+  {key:'tout',   label:'Tout'},
+  {key:'verbe',  label:'Verbes'},
+  {key:'nom',    label:'Noms'},
+  {key:'adj',    label:'Adjectifs'},
+  {key:'pronom', label:'Pronoms'},
+  {key:'adv',    label:'Adverbes'},
+  {key:'conj',   label:'Conjonctions'},
+  {key:'expr',   label:'Expressions'},
+  {key:'nombre', label:'Nombres'},
+  {key:'mot',    label:'Mots outils'},
+];
+
+// ── Persistance locale de la sélection ───────────────────────
+function saveCollect() {
+  try { localStorage.setItem('farsi_collected_v3', JSON.stringify(collected)); } catch(e){}
+}
+function loadCollect() {
+  try {
+    const c = localStorage.getItem('farsi_collected_v3');
+    collected = c ? JSON.parse(c) : [];
+  } catch { collected = []; }
+}
+
+// ── DOM refs ─────────────────────────────────────────────────
+const wordListEl   = document.getElementById('word-list');
+const collectPanel = document.getElementById('collect-panel');
+const collectChips = document.getElementById('collect-chips');
+const collectCount = document.getElementById('collect-count');
+const searchInput  = document.getElementById('search-input');
+const modalOverlay = document.getElementById('modal-overlay');
+const fabAdd       = document.getElementById('fab-add');
+const tabWords     = document.getElementById('tab-words');
+const tabGrammar   = document.getElementById('tab-grammar');
+const catStrip     = document.getElementById('cat-strip');
+const headerCount  = document.getElementById('header-count');
+const statusDot    = document.getElementById('status-dot');
+const statusLabel  = document.getElementById('status-label');
+
+// ── Status bar ───────────────────────────────────────────────
+function setStatus(state, text) {
+  statusDot.className = 'status-dot ' + state;
+  statusLabel.textContent = text;
+}
+
+// ── Cat strip ────────────────────────────────────────────────
+function buildCatStrip() {
+  catStrip.innerHTML = '';
+  CATS.forEach(c => {
+    const pill = document.createElement('button');
+    pill.className = 'cat-pill' + (c.key === activeCat ? ' active' : '');
+    pill.dataset.cat = c.key;
+    pill.textContent = c.label;
+    pill.addEventListener('click', () => {
+      activeCat = c.key;
+      document.querySelectorAll('.cat-pill').forEach(p =>
+        p.classList.toggle('active', p.dataset.cat === activeCat)
+      );
+      renderWords();
+    });
+    catStrip.appendChild(pill);
+  });
+}
+
+// ── Filter ───────────────────────────────────────────────────
+function filteredWords() {
+  let fw = words;
+  if (activeCat !== 'tout') fw = fw.filter(w => w.cat === activeCat);
+  const q = searchQ.toLowerCase().trim();
+  if (q) fw = fw.filter(w =>
+    w.latin.toLowerCase().includes(q) ||
+    (w.phon||'').toLowerCase().includes(q) ||
+    (w.fr||'').toLowerCase().includes(q) ||
+    (w.ref||'').toLowerCase().includes(q)
+  );
+  return fw;
+}
+
+// ── Render words ─────────────────────────────────────────────
+function renderWords() {
+  const fw = filteredWords();
+  headerCount.textContent = words.length + ' mots';
+  if (!fw.length) {
+    wordListEl.innerHTML = `<div class="empty-state"><div class="icon">🔍</div><p>Aucun mot trouvé</p></div>`;
+    return;
+  }
+  wordListEl.innerHTML = '';
+  fw.forEach(w => {
+    const id = String(w.id);
+    const inCollect = collected.includes(id);
+    const item = document.createElement('div');
+    item.className = 'word-item' + (inCollect ? ' in-collect' : '');
+    item.innerHTML = `
+      <div class="word-dot"></div>
+      <div class="word-texts">
+        <div class="word-latin">${escHtml(w.latin)}</div>
+        <div class="word-phon">${escHtml(w.phon || '—')}</div>
+        ${w.fr ? `<div class="word-fr">${escHtml(w.fr)}</div>` : ''}
+        ${w.ref ? `<div class="word-ref">${escHtml(w.ref)}</div>` : ''}
+      </div>
+      <span class="word-cat">${escHtml(w.cat)}</span>
+    `;
+    item.addEventListener('pointerdown', () => {
+      holdTimer = setTimeout(() => {
+        toggleCollect(id);
+        if (navigator.vibrate) navigator.vibrate(30);
+      }, 480);
+      item.classList.add('holding');
+    });
+    const end = () => { clearTimeout(holdTimer); item.classList.remove('holding'); };
+    item.addEventListener('pointerup', end);
+    item.addEventListener('pointerleave', end);
+    item.addEventListener('contextmenu', e => e.preventDefault());
+    wordListEl.appendChild(item);
+  });
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Collect ──────────────────────────────────────────────────
+function renderCollect() {
+  collectCount.textContent = collected.length;
+  if (!collected.length) {
+    collectChips.innerHTML = '<span class="collect-empty">Maintenez un mot pour l\'ajouter</span>';
+    return;
+  }
+  collectChips.innerHTML = '';
+  collected.forEach(id => {
+    const w = words.find(x => String(x.id) === id);
+    if (!w) return;
+    const chip = document.createElement('div');
+    chip.className = 'chip';
+    chip.innerHTML = `
+      <div>
+        <div class="chip-word">${escHtml(w.latin)}</div>
+        <div class="chip-phon">${escHtml(w.phon || '—')}</div>
+      </div>
+      <span class="chip-remove">×</span>
+    `;
+    chip.querySelector('.chip-remove').addEventListener('click', () => {
+      collected = collected.filter(x => x !== id);
+      saveCollect(); renderWords(); renderCollect();
+    });
+    collectChips.appendChild(chip);
+  });
+}
+
+function toggleCollect(id) {
+  const i = collected.indexOf(id);
+  if (i === -1) collected.push(id); else collected.splice(i, 1);
+  saveCollect(); renderWords(); renderCollect();
+}
+
+// ── Tabs ─────────────────────────────────────────────────────
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b === btn));
+    const tab = btn.dataset.tab;
+    tabWords.style.display   = tab === 'words'   ? 'flex' : 'none';
+    tabGrammar.style.display = tab === 'grammar' ? 'flex' : 'none';
+    if (tab === 'grammar') tabGrammar.classList.add('visible');
+    else tabGrammar.classList.remove('visible');
+    fabAdd.style.display = tab === 'words' ? '' : 'none';
+  });
+});
+
+// ── Toggle mode ──────────────────────────────────────────────
+document.querySelectorAll('.toggle-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    mode = btn.dataset.mode;
+    document.querySelectorAll('.toggle-btn').forEach(b =>
+      b.classList.toggle('active', b.dataset.mode === mode)
+    );
+    collectPanel.style.display = mode === 'collect' ? '' : 'none';
+  });
+});
+
+// ── Search ───────────────────────────────────────────────────
+searchInput.addEventListener('input', () => { searchQ = searchInput.value; renderWords(); });
+
+// ── Collect clear ────────────────────────────────────────────
+document.getElementById('collect-clear').addEventListener('click', () => {
+  collected = []; saveCollect(); renderWords(); renderCollect();
+});
+
+// ── Modal ────────────────────────────────────────────────────
+fabAdd.addEventListener('click', openModal);
+document.getElementById('modal-cancel').addEventListener('click', closeModal);
+modalOverlay.addEventListener('click', e => { if (e.target === modalOverlay) closeModal(); });
+
+function openModal() {
+  ['inp-latin','inp-phon','inp-fr'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('inp-cat').value = 'nom';
+  modalOverlay.classList.add('open');
+  setTimeout(() => document.getElementById('inp-latin').focus(), 300);
+}
+function closeModal() { modalOverlay.classList.remove('open'); }
+
+// ── Save new word to Supabase ────────────────────────────────
+document.getElementById('modal-save').addEventListener('click', async () => {
+  const latin = document.getElementById('inp-latin').value.trim();
+  const phon  = document.getElementById('inp-phon').value.trim();
+  const fr    = document.getElementById('inp-fr').value.trim();
+  const cat   = document.getElementById('inp-cat').value;
+  if (!latin) { document.getElementById('inp-latin').focus(); return; }
+
+  const saveBtn = document.getElementById('modal-save');
+  saveBtn.disabled = true;
+  saveBtn.textContent = '…';
+
+  const ref = generateRef(cat, words);
+  try {
+    const [created] = await insertWord({ ref, latin, phon: phon || '—', fr, cat });
+    words.push(created);
+    // re-trier
+    words.sort((a,b) => a.cat.localeCompare(b.cat) || a.latin.localeCompare(b.latin));
+    closeModal();
+    renderWords();
+    renderCollect();
+  } catch(err) {
+    alert('Erreur Supabase : ' + err.message);
+  } finally {
+    saveBtn.disabled = false;
+    saveBtn.textContent = 'Ajouter';
+  }
+});
+
+['inp-latin','inp-phon','inp-fr'].forEach(id => {
+  document.getElementById(id).addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('modal-save').click();
+  });
+});
+
+// ── Init ─────────────────────────────────────────────────────
+async function init() {
+  loadCollect();
+  buildCatStrip();
+  tabWords.style.display   = 'flex';
+  tabGrammar.style.display = 'none';
+
+  setStatus('loading', 'Connexion à Supabase…');
+  try {
+    words = await loadWords();
+    setStatus('ok', `Supabase connecté · ${words.length} mots`);
+  } catch(err) {
+    setStatus('err', 'Erreur de connexion — vérifiez URL / clé');
+    wordListEl.innerHTML = `
+      <div class="empty-state">
+        <div class="icon">⚠️</div>
+        <p>Impossible de charger les mots.<br><small>${err.message}</small></p>
+      </div>`;
+    return;
+  }
+  renderWords();
+  renderCollect();
+}
+
+init();
+</script>
+</body>
+</html>
